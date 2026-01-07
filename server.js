@@ -1,4 +1,3 @@
-<!-- 1. Socket.io Client Bibliothek laden -->
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
@@ -6,40 +5,39 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 
-// Initialisierung von Socket.io mit CORS-Einstellungen
-// "origin: *" erlaubt es deiner HTML-Datei, von jeder Domain aus zu verbinden.
+// WICHTIG: Erlaubt Verbindungen von allen Quellen (CORS)
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: "*", 
         methods: ["GET", "POST"]
     }
 });
 
-// Event-Handler für neue Verbindungen
 io.on('connection', (socket) => {
-    console.log('Ein Benutzer hat sich verbunden. ID:', socket.id);
+    console.log('User verbunden:', socket.id);
 
-    // Wenn der Server eine Nachricht von einem Client empfängt
-    socket.on('newMessage', (msg) => {
-        console.log('Neue Nachricht empfangen:', msg);
+    // Diese Funktion verarbeitet das Objekt { msg, user } vom neuen Client
+    socket.on('newMessage', (data) => {
+        console.log('Nachricht erhalten:', data);
 
-        // Die Nachricht an alle ANDEREN verbundenen Benutzer weiterleiten
+        // Wir extrahieren Text und Name, egal ob es ein Objekt oder String ist
+        const messageText = typeof data === 'object' ? data.msg : data;
+        const userName = typeof data === 'object' ? data.user : "Gast_" + socket.id.substring(0, 3);
+
+        // Weiterleiten an alle anderen
         socket.broadcast.emit('chatMessage', {
-            user: socket.id.substring(0, 5), // Nutzt die ersten 5 Zeichen der ID als Name
-            msg: msg
+            user: userName,
+            msg: messageText
         });
     });
 
-    // Wenn ein Benutzer die Verbindung trennt
     socket.on('disconnect', () => {
-        console.log('Benutzer hat die Verbindung getrennt.');
+        console.log('User getrennt');
     });
 });
 
-// Port-Konfiguration: Railway vergibt den Port über process.env.PORT.
-// Lokal wird Port 3000 verwendet.
-const PORT = process.env.PORT || 3000;
-
+// Railway nutzt process.env.PORT
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-    console.log(`Chat-Server läuft auf Port ${PORT}`);
+    console.log(`Server läuft auf Port ${PORT}`);
 });
